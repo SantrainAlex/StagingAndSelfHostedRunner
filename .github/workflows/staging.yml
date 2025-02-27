@@ -61,9 +61,23 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              body: '🚀 Déploiement en staging réussi !'
-            })
+            const message = '🚀 Déploiement en staging réussi !';
+            
+            if (context.payload.pull_request) {
+              // Si c'est une pull request
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.pull_request.number,
+                body: message
+              });
+            } else {
+              // Si c'est un push direct
+              const sha = context.sha.substring(0, 7);
+              await github.rest.repos.createCommitComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                commit_sha: context.sha,
+                body: `${message}\nCommit: ${sha}`
+              });
+            }
