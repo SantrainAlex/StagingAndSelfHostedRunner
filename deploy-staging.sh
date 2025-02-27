@@ -29,7 +29,7 @@ npm test || { echo -e "${RED}❌ Les tests ont échoué${NC}"; exit 1; }
 
 # Construction de l'image Docker pour le staging
 echo "🏗️ Construction de l'image Docker pour le staging..."
-docker build -t $IMAGE_NAME -f docker/staging/Dockerfile . || { echo -e "${RED}❌ Échec de la construction de l'image${NC}"; exit 1; }
+docker buildx build --platform linux/amd64 --load -t $IMAGE_NAME -f docker/staging/Dockerfile . || { echo -e "${RED}❌ Échec de la construction de l'image${NC}"; exit 1; }
 
 # Vérification que l'image existe
 if ! docker image inspect $IMAGE_NAME >/dev/null 2>&1; then
