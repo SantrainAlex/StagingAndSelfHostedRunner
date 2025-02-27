@@ -9,6 +9,13 @@ on:
     branches:
       - develop
 
+# Définition des permissions nécessaires
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  statuses: write
+
 jobs:
   test:
     name: Tests
@@ -56,28 +63,9 @@ jobs:
         env:
           DOCKER_BUILDKIT: 1
           
-      - name: Notification de déploiement
+      - name: Créer un statut de déploiement
         if: success()
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const message = '🚀 Déploiement en staging réussi !';
-            
-            if (context.payload.pull_request) {
-              // Si c'est une pull request
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.payload.pull_request.number,
-                body: message
-              });
-            } else {
-              // Si c'est un push direct
-              const sha = context.sha.substring(0, 7);
-              await github.rest.repos.createCommitComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                commit_sha: context.sha,
-                body: `${message}\nCommit: ${sha}`
-              });
-            }
+        run: |
+          echo "✅ Déploiement en staging réussi !"
+          echo "🌐 Application accessible sur http://staging.votreapp.com"
+          echo "📦 Version déployée : ${GITHUB_SHA::7}"
