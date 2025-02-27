@@ -1,0 +1,68 @@
+name: Test Runner Docker
+
+on:
+  workflow_dispatch:  # Déclenchement manuel uniquement
+
+jobs:
+  test-docker:
+    name: 🔍 Test Docker
+    runs-on: self-hosted
+    steps:
+      - name: Vérification de Docker
+        run: |
+          echo "🔍 Vérification du service Docker..."
+          if ! systemctl is-active --quiet docker; then
+            echo "❌ Le service Docker n'est pas actif"
+            exit 1
+          fi
+          echo "✅ Service Docker actif"
+
+      - name: Vérification des permissions Docker
+        run: |
+          echo "👤 Utilisateur actuel : $(whoami)"
+          echo "🔍 Groupes de l'utilisateur :"
+          groups
+          
+          echo "🐳 Test des commandes Docker..."
+          if ! docker ps; then
+            echo "❌ Impossible d'exécuter docker ps"
+            exit 1
+          fi
+          echo "✅ Commande docker ps réussie"
+
+      - name: Test de construction d'image
+        run: |
+          echo "🏗️ Test de construction d'une image..."
+          echo 'FROM alpine:latest
+          CMD ["echo", "Hello from Docker!"]' > Dockerfile.test
+          
+          if ! docker build -t test-image -f Dockerfile.test .; then
+            echo "❌ Échec de la construction de l'image"
+            exit 1
+          fi
+          echo "✅ Construction de l'image réussie"
+
+      - name: Test d'exécution de conteneur
+        run: |
+          echo "🚀 Test d'exécution d'un conteneur..."
+          if ! docker run --rm test-image; then
+            echo "❌ Échec de l'exécution du conteneur"
+            exit 1
+          fi
+          echo "✅ Exécution du conteneur réussie"
+
+      - name: Nettoyage
+        if: always()
+        run: |
+          echo "🧹 Nettoyage..."
+          docker rmi test-image || true
+          rm Dockerfile.test || true
+          echo "✅ Nettoyage terminé"
+
+      - name: Vérification de l'espace disque
+        run: |
+          echo "💾 Espace disque disponible :"
+          df -h
+          
+          echo "🗄️ Espace Docker :"
+          docker system df
