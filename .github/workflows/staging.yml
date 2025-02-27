@@ -1,0 +1,69 @@
+name: Déploiement Staging
+
+on:
+  push:
+    branches:
+      - develop
+      - feature/*
+  pull_request:
+    branches:
+      - develop
+
+jobs:
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Configuration de Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '21'
+          cache: 'npm'
+          
+      - name: Installation des dépendances
+        run: npm ci
+        
+      - name: Exécution des tests
+        run: npm test
+
+  deploy-staging:
+    name: Déploiement Staging
+    needs: test
+    runs-on: self-hosted
+    environment:
+      name: staging
+      url: http://staging.votreapp.com
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Configuration de Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '21'
+          cache: 'npm'
+          
+      - name: Installation des dépendances
+        run: npm ci
+        
+      - name: Construction et déploiement
+        run: |
+          chmod +x ./deploy-staging.sh
+          ./deploy-staging.sh
+        env:
+          DOCKER_BUILDKIT: 1
+          
+      - name: Notification de déploiement
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: '🚀 Déploiement en staging réussi !'
+            })

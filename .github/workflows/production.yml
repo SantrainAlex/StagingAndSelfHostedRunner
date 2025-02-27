@@ -1,0 +1,84 @@
+name: Déploiement Production
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Configuration de Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '21'
+          cache: 'npm'
+          
+      - name: Installation des dépendances
+        run: npm ci
+        
+      - name: Exécution des tests
+        run: npm test
+
+  approve-deployment:
+    name: Approbation du Déploiement
+    needs: test
+    runs-on: ubuntu-latest
+    environment:
+      name: production-approval
+    
+    steps:
+      - name: Approbation manuelle
+        run: echo "Déploiement approuvé manuellement"
+
+  deploy-production:
+    name: Déploiement Production
+    needs: [test, approve-deployment]
+    runs-on: self-hosted
+    environment:
+      name: production
+      url: https://votreapp.com
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Configuration de Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '21'
+          cache: 'npm'
+          
+      - name: Installation des dépendances
+        run: npm ci
+        
+      - name: Construction et déploiement
+        run: |
+          chmod +x ./deploy-production.sh
+          ./deploy-production.sh
+        env:
+          DOCKER_BUILDKIT: 1
+          NODE_ENV: production
+          
+      - name: Notification de déploiement
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const message = `🚀 Version ${process.env.GITHUB_SHA.substring(0, 7)} déployée en production !
+            
+            Changements inclus dans ce déploiement :
+            - ${context.payload.head_commit?.message || 'Déploiement manuel'}`;
+            
+            github.rest.repos.createDeploymentStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              deployment_id: context.payload.deployment.id,
+              state: 'success',
+              description: 'Déploiement en production réussi'
+            });
